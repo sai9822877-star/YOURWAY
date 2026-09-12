@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix Morphic",
+  "description": "A premium, adaptive learning platform that generates personalized study courses and timetables based on your unique academic needs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Security Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function isValidUsername(uname) {
+      return uname is string && uname.size() >= 3 && uname.size() <= 35 && uname.matches('^[a-z0-9_]+$');
+    }
+
+    function isNotReserved(uname) {
+      return !(uname in ['admin', 'administrator', 'system', 'root', 'morphic', 'yourway', 'support', 'official', 'mod', 'moderator', 'help']);
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Public User Profiles
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) &&
+        incoming().uid == request.auth.uid &&
+        isValidUsername(incoming().username);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // Private User Data (PII isolated from public reads)
+      match /private/info {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Unique Username Registry
+    match /usernames/{username} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() &&
+        isValidUsername(username) &&
+        isNotReserved(username) &&
+        incoming().uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+  }
+}
